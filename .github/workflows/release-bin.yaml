@@ -12,4 +12,4 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           goos: linux
           goarch: amd64
-          pre_command: go get -u ./...
+          pre_command: go get github.com/aws/aws-lambda-go/lambda
