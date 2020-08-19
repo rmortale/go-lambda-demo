@@ -35,7 +35,7 @@ jobs:
         run: |
           go get github.com/aws/aws-lambda-go/lambda
           GOOS=linux GOARCH=amd64 go build
-          zip --junk-paths go-lambda-demo-${{ steps.determine_tag.outputs.tag }}-linux-amd64 go-lambda-demo
+          zip --junk-paths go-lambda-demo-${{ steps.determine_tag.outputs.tag }}-linux-amd64.zip go-lambda-demo
           ls -la
 
       - name: Create Release
