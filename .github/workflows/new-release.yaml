@@ -1,12 +1,5 @@
 on:
-  # Trigger the workflow on push or pull request,
-  # but only for the master branch
   push:
-    branches:
-      - master
-  pull_request:
-    branches:
-      - master
 
 name: Build Release
 
@@ -15,47 +8,32 @@ jobs:
     name: release linux/amd64
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/setup-go@v2
+        with:
+          go-version: "^1.14.7" # The Go version to download (if necessary) and use.
+
       - name: Checkout code
         uses: actions/checkout@master
         with:
           fetch-depth: "0"
 
-      - name: Determine the next version without tagging the branch
+      - name: Build and package
+        run: |
+          go get github.com/aws/aws-lambda-go/lambda
+          GOOS=linux GOARCH=amd64 go test
+          GOOS=linux GOARCH=amd64 go build
+          zip --junk-paths go-lambda-demo-linux-amd64.zip go-lambda-demo
+          ls -la
+
+      - name: Determine the next version tagging the branch
         id: determine_tag
         uses: anothrNick/github-tag-action@1.17.2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          DRY_RUN: true
 
-      - uses: actions/setup-go@v2
+      - name: Release
+        uses: softprops/action-gh-release@v1
         with:
-          go-version: "^1.14.7" # The Go version to download (if necessary) and use.
-
-      - name: Build and package
-        run: |
-          go get github.com/aws/aws-lambda-go/lambda
-          GOOS=linux GOARCH=amd64 go build
-          zip --junk-paths go-lambda-demo-${{ steps.determine_tag.outputs.tag }}-linux-amd64.zip go-lambda-demo
-          ls -la
-
-      - name: Create Release
-        id: create_release
-        uses: actions/create-release@v1
+          files: go-lambda-demo-linux-amd64.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ steps.determine_tag.outputs.tag }}
-          release_name: Release ${{ steps.determine_tag.outputs.tag }}
-          draft: false
-          prerelease: false
-
-      - name: Upload Release Asset
-        id: upload-release-asset
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps
-          asset_path: ./go-lambda-demo-${{ steps.determine_tag.outputs.tag }}-linux-amd64.zip
-          asset_name: go-lambda-demo-${{ steps.determine_tag.outputs.tag }}-linux-amd64.zip
-          asset_content_type: application/zip
